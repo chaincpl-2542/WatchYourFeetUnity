@@ -697,6 +697,7 @@ GameObject:
   - component: {fileID: 185726352}
   - component: {fileID: 185726351}
   - component: {fileID: 185726353}
+  - component: {fileID: 185726354}
   m_Layer: 0
   m_Name: OpenCVController
   m_TagString: Untagged
@@ -711,7 +712,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 185726350}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 61572bf6e1e9b49fcb108ef9f41f174e, type: 3}
   m_Name: 
@@ -765,14 +766,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 185726350}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e5a354d329f54a24ae180b640ac1c2f, type: 3}
+  m_Script: {fileID: 11500000, guid: bb780cd90b0a94a3c866c0ba5e999671, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rawImageDisplay: {fileID: 640088801}
-  webcamTexture: {fileID: 0}
-  cfgFileName: yolov4-tiny.cfg
-  weightsFileName: yolov4-tiny.weights
-  namesFileName: coco.names
+  port: 5055
+  perspectiveTransform: {fileID: 185726351}
+  personPrefab: {fileID: 7457930731145646424, guid: 10f2426be00dc4b98b8cf89be0460aad, type: 3}
+--- !u!114 &185726354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185726350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47f458d48461f413dbbd532674cad72b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &378661543
 GameObject:
   m_ObjectHideFlags: 0

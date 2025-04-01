@@ -263,4 +263,9 @@ public class PerspectiveTransform : MonoBehaviour
             Imgproc.line(mat, new Point(0, y), new Point(width, y), color, thickness);
         }
     }
+    
+    public Mat GetMatrix()
+    {
+        return perspectiveMatrix;
+    }
 }

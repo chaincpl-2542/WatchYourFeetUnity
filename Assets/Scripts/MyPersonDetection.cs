@@ -12,13 +12,17 @@ using KeyPoint = OpenCVForUnityExample.DnnModel.MediaPipePoseEstimator.KeyPoint;
 namespace OpenCVForUnityExample
 {
     [RequireComponent(typeof(MultiSource2MatHelper))]
-    public class MyPersonDetectionWithRawImage : MonoBehaviour
+    public class MyPersonDetection : MonoBehaviour
     {
+        public PersonPositionTransformer positionTransformer;
+
         public RawImage rawImageDisplay;
         public Image markerPrefab;
+        public Image centerMarkerPrefab;
 
         private Image leftFootMarker;
         private Image rightFootMarker;
+        private Image centerMarker;
 
         public bool mask;
         public bool showSkeleton;
@@ -49,13 +53,20 @@ namespace OpenCVForUnityExample
 
             person_detection_model_filepath = await Utils.getFilePathAsyncTask(PERSON_DETECTION_MODEL_FILENAME, cancellationToken: cts.Token);
             pose_estimation_model_filepath = await Utils.getFilePathAsyncTask(POSE_ESTIMATION_MODEL_FILENAME, cancellationToken: cts.Token);
-
-            Run();
-
+            
             leftFootMarker = Instantiate(markerPrefab, markerPrefab.transform.parent);
-            rightFootMarker = Instantiate(markerPrefab, markerPrefab.transform.parent);
+            leftFootMarker.gameObject.name = "LeftFootMarker";
             leftFootMarker.gameObject.SetActive(true);
+            
+            rightFootMarker = Instantiate(markerPrefab, markerPrefab.transform.parent);
+            rightFootMarker.gameObject.name = "RightFootMarker";
             rightFootMarker.gameObject.SetActive(true);
+            
+            centerMarker = Instantiate(centerMarkerPrefab, centerMarkerPrefab.transform.parent);
+            centerMarker.gameObject.name = "CenterMarker";
+            centerMarker.gameObject.SetActive(true);
+            
+            Run();
         }
 
         void Run()
@@ -122,16 +133,45 @@ namespace OpenCVForUnityExample
                         Vector2 leftFoot = new Vector2(landmarks_screen[(int)KeyPoint.LeftFootIndex].x, landmarks_screen[(int)KeyPoint.LeftFootIndex].y);
                         Vector2 rightFoot = new Vector2(landmarks_screen[(int)KeyPoint.RightFootIndex].x, landmarks_screen[(int)KeyPoint.RightFootIndex].y);
 
+                        // ขนาดภาพจริงจาก Mat
+                        float texWidth = texture.width;
+                        float texHeight = texture.height;
+
                         RectTransform rect = rawImageDisplay.rectTransform;
+                        float uiWidth = rect.rect.width;
+                        float uiHeight = rect.rect.height;
 
-                        Vector2 localLeft;
-                        Vector2 localRight;
+                        float leftX = (leftFoot.x / texWidth) * uiWidth - uiWidth / 2f;
+                        float leftY = (1f - (leftFoot.y / texHeight)) * uiHeight - uiHeight / 2f;
 
-                        RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, new Vector2(leftFoot.x, Screen.height - leftFoot.y), null, out localLeft);
-                        RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, new Vector2(rightFoot.x, Screen.height - rightFoot.y), null, out localRight);
+                        float rightX = (rightFoot.x / texWidth) * uiWidth - uiWidth / 2f;
+                        float rightY = (1f - (rightFoot.y / texHeight)) * uiHeight - uiHeight / 2f;
 
-                        leftFootMarker.rectTransform.anchoredPosition = localLeft;
-                        rightFootMarker.rectTransform.anchoredPosition = localRight;
+                        leftFootMarker.rectTransform.anchoredPosition = new Vector2(leftX, leftY);
+                        rightFootMarker.rectTransform.anchoredPosition = new Vector2(rightX, rightY);
+                        
+                        // คำนวณตำแหน่ง center marker
+                        float centerX = (leftFoot.x + rightFoot.x) / 2f;
+
+                        // หา Y ที่ต่ำสุดจากทุกจุด
+                        float lowestY = landmarks_screen[0].y;
+                        for (int i = 1; i < landmarks_screen.Length; i++)
+                        {
+                            if (landmarks_screen[i].y > lowestY)
+                                lowestY = landmarks_screen[i].y;
+                        }
+
+                        Vector2 centerScreen = new Vector2(centerX, lowestY);
+                        
+                        if (positionTransformer != null)
+                            positionTransformer.UpdatePosition(centerScreen);
+                        
+                        // แปลงพิกัดภาพเป็นพิกัด UI RawImage
+                        float centerXUI = (centerScreen.x / texWidth) * uiWidth - uiWidth / 2f;
+                        float centerYUI = (1f - (centerScreen.y / texHeight)) * uiHeight - uiHeight / 2f;
+
+                        centerMarker.rectTransform.anchoredPosition = new Vector2(centerXUI, centerYUI);
+
                     }
                 }
 

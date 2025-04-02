@@ -125,7 +125,6 @@ namespace OpenCVForUnityExample.DnnModel
 
             // Copy only world landmarks data from pose data.
             MatUtils.copyFromMat<Vector3>(result.rowRange(199, 199 + 99), landmarks_world_buffer);
-
             UpdatePose(landmarks_world_buffer);
         }
 

@@ -20,7 +20,7 @@ public class PerspectiveTransform : MonoBehaviour
     [Header("Grid Settings")]
     public int gridRows = 3;
     public int gridCols = 3;
-    public Scalar gridColor = new Scalar(0, 255, 0, 255); // สีเขียว
+    public Scalar gridColor = new Scalar(0, 255, 0, 255);
     public int gridThickness = 2;
 
     [Header("Result Size")]
@@ -37,16 +37,12 @@ public class PerspectiveTransform : MonoBehaviour
     private bool _trackingMode = false;
     private bool _pointingMode = false;
     private bool _isSetArea = false;
-    private WebCamTexture webcamTexture;
+    private Mat latestCameraMat;
     private Mat perspectiveMatrix;
     public RectTransform markerRectTransform;
 
     void Start()
     {
-        webcamTexture = new WebCamTexture();
-        webcamTexture.Play();
-        rawImageDisplay.texture = webcamTexture;
-        
         confirmButton.onClick.AddListener(OnConfirmCustomResultSize);
     }
 
@@ -54,10 +50,10 @@ public class PerspectiveTransform : MonoBehaviour
     {
         HandlePointClick();
         HandleGridClick();
-        
+
         trackingModeText.text = "Tracking Mode: " + (_trackingMode ? "ON" : "OFF");
         pointingModeText.text = "Pointing Mode: " + (_pointingMode ? "ON" : "OFF");
-        
+
         if (Input.GetKeyDown(KeyCode.Q))
         {
             if (_isSetArea)
@@ -70,24 +66,24 @@ public class PerspectiveTransform : MonoBehaviour
                 Debug.LogError($"Need to set area first");
             }
         }
-        
+
         if (Input.GetKeyDown(KeyCode.E))
         {
             _pointingMode = !_pointingMode;
             _trackingMode = false;
         }
 
-        if (_trackingMode)
+        if (_trackingMode && latestCameraMat != null && perspectiveMatrix != null)
         {
             Vector2 mousePos = Input.mousePosition;
             RectTransform rect = rawImageDisplay.rectTransform;
 
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null, out Vector2 localPos))
             {
-                float x = (localPos.x + rect.rect.width / 2) * webcamTexture.width / rect.rect.width;
-                float y = (localPos.y + rect.rect.height / 2) * webcamTexture.height / rect.rect.height;
+                float x = (localPos.x + rect.rect.width / 2) * latestCameraMat.width() / rect.rect.width;
+                float y = (localPos.y + rect.rect.height / 2) * latestCameraMat.height() / rect.rect.height;
 
-                y = webcamTexture.height - y;
+                y = latestCameraMat.height() - y;
 
                 MatOfPoint2f srcPoint = new MatOfPoint2f(new Point(x, y));
                 MatOfPoint2f dstPoint = new MatOfPoint2f();
@@ -134,13 +130,13 @@ public class PerspectiveTransform : MonoBehaviour
                     RectTransform markerRect = markerImages[clickCount].rectTransform;
                     markerRect.position = mousePos;
 
-                    float x = (localPos.x + rect.rect.width / 2) * webcamTexture.width / rect.rect.width;
-                    float y = (localPos.y + rect.rect.height / 2) * webcamTexture.height / rect.rect.height;
+                    float x = (localPos.x + rect.rect.width / 2) * latestCameraMat.width() / rect.rect.width;
+                    float y = (localPos.y + rect.rect.height / 2) * latestCameraMat.height() / rect.rect.height;
 
-                    clickedPoints[clickCount] = new Vector2(x, webcamTexture.height - y);
+                    clickedPoints[clickCount] = new Vector2(x, latestCameraMat.height() - y);
                     clickCount++;
 
-                    Debug.Log($"Point {clickCount}: ({x}, {webcamTexture.height - y})");
+                    Debug.Log($"Point {clickCount}: ({x}, {latestCameraMat.height() - y})");
 
                     if (clickCount == 4)
                     {
@@ -207,18 +203,13 @@ public class PerspectiveTransform : MonoBehaviour
         perspectiveMatrix = Imgproc.getPerspectiveTransform(srcMat, dstMat);
         Mat output = new Mat(resultHeightSize, resultWidthSize, CvType.CV_8UC3);
 
-        Mat cameraMat = new Mat(webcamTexture.height, webcamTexture.width, CvType.CV_8UC3);
-        Utils.webCamTextureToMat(webcamTexture, cameraMat);
-
-        Imgproc.warpPerspective(cameraMat, output, perspectiveMatrix, new Size(resultWidthSize, resultHeightSize));
-
+        Imgproc.warpPerspective(latestCameraMat, output, perspectiveMatrix, new Size(resultWidthSize, resultHeightSize));
         DrawGrid(output, gridRows, gridCols, gridColor, gridThickness);
 
         Texture2D resultTexture = new Texture2D(resultWidthSize, resultHeightSize, TextureFormat.RGB24, false);
         Utils.matToTexture2D(output, resultTexture);
         rawImageResult.texture = resultTexture;
 
-        // Resize UI RawImage to match result size
         rawImageResult.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, resultWidthSize);
         rawImageResult.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, resultHeightSize);
 
@@ -263,9 +254,14 @@ public class PerspectiveTransform : MonoBehaviour
             Imgproc.line(mat, new Point(0, y), new Point(width, y), color, thickness);
         }
     }
-    
+
     public Mat GetMatrix()
     {
         return perspectiveMatrix;
+    }
+
+    public void SetCameraMat(Mat mat)
+    {
+        latestCameraMat = mat;
     }
 }

@@ -403,6 +403,7 @@ MonoBehaviour:
   rawImageDisplay: {fileID: 608497349}
   markerPrefab: {fileID: 1125538610}
   centerMarkerPrefab: {fileID: 1214700090}
+  positionTransformer: {fileID: 0}
   mask: 0
   showSkeleton: 1
   skeletonVisualizer: {fileID: 857751293}

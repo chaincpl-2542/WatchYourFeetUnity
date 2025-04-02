@@ -13,12 +13,12 @@ namespace OpenCVForUnityExample
 {
     [RequireComponent(typeof(MultiSource2MatHelper))]
     public class MyPersonDetection : MonoBehaviour
-    {
-        public PersonPositionTransformer positionTransformer;
-
+    {   
+        public PerspectiveTransform perspectiveTransform;
         public RawImage rawImageDisplay;
         public Image markerPrefab;
         public Image centerMarkerPrefab;
+        public PersonPositionTransformer positionTransformer;
 
         private Image leftFootMarker;
         private Image rightFootMarker;
@@ -53,19 +53,19 @@ namespace OpenCVForUnityExample
 
             person_detection_model_filepath = await Utils.getFilePathAsyncTask(PERSON_DETECTION_MODEL_FILENAME, cancellationToken: cts.Token);
             pose_estimation_model_filepath = await Utils.getFilePathAsyncTask(POSE_ESTIMATION_MODEL_FILENAME, cancellationToken: cts.Token);
-            
+
             leftFootMarker = Instantiate(markerPrefab, markerPrefab.transform.parent);
             leftFootMarker.gameObject.name = "LeftFootMarker";
             leftFootMarker.gameObject.SetActive(true);
-            
+
             rightFootMarker = Instantiate(markerPrefab, markerPrefab.transform.parent);
             rightFootMarker.gameObject.name = "RightFootMarker";
             rightFootMarker.gameObject.SetActive(true);
-            
+
             centerMarker = Instantiate(centerMarkerPrefab, centerMarkerPrefab.transform.parent);
             centerMarker.gameObject.name = "CenterMarker";
             centerMarker.gameObject.SetActive(true);
-            
+
             Run();
         }
 
@@ -133,7 +133,6 @@ namespace OpenCVForUnityExample
                         Vector2 leftFoot = new Vector2(landmarks_screen[(int)KeyPoint.LeftFootIndex].x, landmarks_screen[(int)KeyPoint.LeftFootIndex].y);
                         Vector2 rightFoot = new Vector2(landmarks_screen[(int)KeyPoint.RightFootIndex].x, landmarks_screen[(int)KeyPoint.RightFootIndex].y);
 
-                        // ขนาดภาพจริงจาก Mat
                         float texWidth = texture.width;
                         float texHeight = texture.height;
 
@@ -149,11 +148,8 @@ namespace OpenCVForUnityExample
 
                         leftFootMarker.rectTransform.anchoredPosition = new Vector2(leftX, leftY);
                         rightFootMarker.rectTransform.anchoredPosition = new Vector2(rightX, rightY);
-                        
-                        // คำนวณตำแหน่ง center marker
-                        float centerX = (leftFoot.x + rightFoot.x) / 2f;
 
-                        // หา Y ที่ต่ำสุดจากทุกจุด
+                        float centerX = (leftFoot.x + rightFoot.x) / 2f;
                         float lowestY = landmarks_screen[0].y;
                         for (int i = 1; i < landmarks_screen.Length; i++)
                         {
@@ -162,16 +158,17 @@ namespace OpenCVForUnityExample
                         }
 
                         Vector2 centerScreen = new Vector2(centerX, lowestY);
-                        
-                        if (positionTransformer != null)
-                            positionTransformer.UpdatePosition(centerScreen);
-                        
-                        // แปลงพิกัดภาพเป็นพิกัด UI RawImage
+
                         float centerXUI = (centerScreen.x / texWidth) * uiWidth - uiWidth / 2f;
                         float centerYUI = (1f - (centerScreen.y / texHeight)) * uiHeight - uiHeight / 2f;
 
                         centerMarker.rectTransform.anchoredPosition = new Vector2(centerXUI, centerYUI);
 
+                        if (positionTransformer != null)
+                            positionTransformer.UpdatePosition(centerScreen);
+
+                        if (perspectiveTransform != null)
+                            perspectiveTransform.SetCameraMat(rgbaMat);
                     }
                 }
 

@@ -48,6 +48,12 @@ namespace OpenCVForUnityExample
         {
             multiSource2MatHelper = GetComponent<MultiSource2MatHelper>();
             multiSource2MatHelper.outputColorFormat = Source2MatHelperColorFormat.RGBA;
+            
+            multiSource2MatHelper.onInitialized.AddListener(OnSourceToMatHelperInitialized);
+            multiSource2MatHelper.onDisposed.AddListener(OnSourceToMatHelperDisposed);
+            multiSource2MatHelper.onErrorOccurred.AddListener(OnSourceToMatHelperErrorOccurred);
+            
+            multiSource2MatHelper.Initialize();
 
             if (skeletonVisualizer != null) skeletonVisualizer.showSkeleton = showSkeleton;
 
@@ -103,6 +109,9 @@ namespace OpenCVForUnityExample
             {
                 Mat rgbaMat = multiSource2MatHelper.GetMat();
 
+                if (perspectiveTransform != null)
+                    perspectiveTransform.SetCameraMat(rgbaMat);
+                
                 if (personDetector == null || poseEstimator == null)
                 {
                     Imgproc.putText(rgbaMat, "model file is not loaded.", new Point(5, rgbaMat.rows() - 30), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(255, 255, 255, 255), 2);
@@ -183,6 +192,28 @@ namespace OpenCVForUnityExample
             poseEstimator?.dispose();
             Utils.setDebugMode(false);
             cts?.Dispose();
+        }
+        
+        public void OnSourceToMatHelperDisposed()
+        {
+            if (bgrMat != null)
+            {
+                bgrMat.Dispose();
+                bgrMat = null;
+            }
+
+            if (texture != null)
+            {
+                Texture2D.Destroy(texture);
+                texture = null;
+            }
+
+            arHelper.Dispose();
+        }
+
+        public void OnSourceToMatHelperErrorOccurred(Source2MatHelperErrorCode errorCode, string message)
+        {
+            Debug.LogError("OnSourceToMatHelperErrorOccurred " + errorCode + ": " + message);
         }
     }
 }

@@ -72,7 +72,7 @@ public class PerspectiveTransform : MonoBehaviour
             _pointingMode = !_pointingMode;
             _trackingMode = false;
         }
-
+        
         if (_trackingMode && latestCameraMat != null && perspectiveMatrix != null)
         {
             Vector2 mousePos = Input.mousePosition;
@@ -97,6 +97,7 @@ public class PerspectiveTransform : MonoBehaviour
 
                 int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
                 int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
+                print("Mouse : " + col + " : " + cellWidth);
 
                 col = Mathf.Clamp(col, 0, gridCols - 1);
                 row = Mathf.Clamp(row, 0, gridRows - 1);
@@ -120,28 +121,34 @@ public class PerspectiveTransform : MonoBehaviour
     {
         if (_pointingMode)
         {
-            if (Input.GetMouseButtonDown(0) && clickCount < 4)
+            if (latestCameraMat != null)
             {
-                Vector2 mousePos = Input.mousePosition;
-                RectTransform rect = rawImageDisplay.rectTransform;
-
-                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null, out Vector2 localPos))
+                if (Input.GetMouseButtonDown(0) && clickCount < 4)
                 {
-                    RectTransform markerRect = markerImages[clickCount].rectTransform;
-                    markerRect.position = mousePos;
+                    Vector2 mousePos = Input.mousePosition;
+                    RectTransform rect = rawImageDisplay.rectTransform;
 
-                    float x = (localPos.x + rect.rect.width / 2) * latestCameraMat.width() / rect.rect.width;
-                    float y = (localPos.y + rect.rect.height / 2) * latestCameraMat.height() / rect.rect.height;
-
-                    clickedPoints[clickCount] = new Vector2(x, latestCameraMat.height() - y);
-                    clickCount++;
-
-                    Debug.Log($"Point {clickCount}: ({x}, {latestCameraMat.height() - y})");
-
-                    if (clickCount == 4)
+                    if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null,
+                            out Vector2 localPos))
                     {
-                        ApplyPerspectiveTransform();
-                        clickCount = 0;
+                        RectTransform markerRect = markerImages[clickCount].rectTransform;
+                        markerRect.position = mousePos;
+
+                        float x = (localPos.x + rect.rect.width / 2) * latestCameraMat.width() / rect.rect.width;
+                        float y = (localPos.y + rect.rect.height / 2) * latestCameraMat.height() / rect.rect.height;
+                        
+                        print($"Mouse x : {x} y : {y} ");
+                        
+                        clickedPoints[clickCount] = new Vector2(x, latestCameraMat.height() - y);
+                        clickCount++;
+
+                        Debug.Log($"Point {clickCount}: ({x}, {latestCameraMat.height() - y})");
+
+                        if (clickCount == 4)
+                        {
+                            ApplyPerspectiveTransform();
+                            clickCount = 0;
+                        }
                     }
                 }
             }
@@ -154,7 +161,6 @@ public class PerspectiveTransform : MonoBehaviour
         {
             Vector2 mousePos = Input.mousePosition;
             RectTransform rect = rawImageResult.rectTransform;
-
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null, out Vector2 localPos))
             {
                 float texWidth = resultWidthSize;
@@ -263,5 +269,11 @@ public class PerspectiveTransform : MonoBehaviour
     public void SetCameraMat(Mat mat)
     {
         latestCameraMat = mat;
+        //Debug.Log($"✅ latestCameraMat SET: {mat.width()}x{mat.height()}");
+    }
+    
+    public Mat GetCameraMat()
+    {
+        return latestCameraMat;
     }
 }

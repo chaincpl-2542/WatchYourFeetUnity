@@ -16,10 +16,9 @@ public class PersonPositionTransformer : MonoBehaviour
     [Header("Grid Size")] 
     public int gridRows = 3;
     public int gridCols = 3;
-
-    [Header("Texture Size")] 
-    public int resultWidthSize = 300;
-    public int resultHeightSize = 300;
+    
+    private int resultWidthSize;
+    private int resultHeightSize;
 
     public void UpdatePosition(Vector2 screenPosition)
     {
@@ -29,28 +28,49 @@ public class PersonPositionTransformer : MonoBehaviour
             return;
         }
 
-        // 1. สร้างจุดจาก screen position ที่ได้ (จาก MyPersonDetection)
-        MatOfPoint2f srcPoint = new MatOfPoint2f(new Point(screenPosition.x, screenPosition.y));
-        MatOfPoint2f dstPoint = new MatOfPoint2f();
+        resultWidthSize = perspectiveTransform.resultWidthSize;
+        resultHeightSize = perspectiveTransform.resultHeightSize;
+        
+        var rawRect = perspectiveTransform.rawImageDisplay.rectTransform;
+        var camMat = perspectiveTransform.GetCameraMat();
+        if (camMat == null)
+        {
+            Debug.LogWarning("Camera Mat is null");
+            return;
+        }
 
-        // 2. ใช้ perspective matrix
+        float camWidth = camMat.width();
+        float camHeight = camMat.height();
+
+        // Convert screenPosition to match rawImage rect
+        float x = (screenPosition.x / rawRect.rect.width) * camWidth;
+        float y = (screenPosition.y / rawRect.rect.height) * camHeight;
+
+        print($"Person x : {x} y : {y} ");
+        
+        // Flip Y axis to match OpenCV coordinate
+        y = camHeight - y;
+
+        // Apply perspective transform
+        MatOfPoint2f srcPoint = new MatOfPoint2f(new Point(x, y));
+        MatOfPoint2f dstPoint = new MatOfPoint2f();
         Core.perspectiveTransform(srcPoint, dstPoint, perspectiveTransform.GetMatrix());
         Point resultPos = dstPoint.toArray()[0];
 
-        // 3. คำนวณตำแหน่งบน Grid
+        // Compute grid cell
         float cellWidth = (float)resultWidthSize / gridCols;
         float cellHeight = (float)resultHeightSize / gridRows;
 
         int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
         int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
-
+        
+        print("Person : " + col + " : " + cellWidth);
         col = Mathf.Clamp(col, 0, gridCols - 1);
         row = Mathf.Clamp(row, 0, gridRows - 1);
 
         if (debugGridText != null)
             debugGridText.text = $"[Row: {row}, Col: {col}]";
 
-        // 4. แสดง marker UI (optional)
         if (gridMarkerUI != null)
         {
             RectTransform resultRect = perspectiveTransform.rawImageResult.rectTransform;

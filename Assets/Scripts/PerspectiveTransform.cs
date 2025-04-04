@@ -10,6 +10,7 @@ public class PerspectiveTransform : MonoBehaviour
 {
     public RawImage rawImageDisplay;
     public RawImage rawImageResult;
+    public GameObject debugPanel;
     private Mat sourceMat;
 
     private Vector2[] clickedPoints = new Vector2[4];
@@ -37,6 +38,8 @@ public class PerspectiveTransform : MonoBehaviour
     private bool _trackingMode = false;
     private bool _pointingMode = false;
     private bool _isSetArea = false;
+    private bool _showResultImage = true ;
+    private bool _showDebug = true ;
     private Mat latestCameraMat;
     private Mat perspectiveMatrix;
     public RectTransform markerRectTransform;
@@ -54,6 +57,24 @@ public class PerspectiveTransform : MonoBehaviour
         trackingModeText.text = "Tracking Mode: " + (_trackingMode ? "ON" : "OFF");
         pointingModeText.text = "Pointing Mode: " + (_pointingMode ? "ON" : "OFF");
 
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            _pointingMode = !_pointingMode;
+            _trackingMode = false;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            _showResultImage = !_showResultImage;
+            rawImageResult.enabled = _showResultImage;
+        }
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            _showDebug = !_showDebug;
+            debugPanel.SetActive(_showDebug);
+        }
+
         if (Input.GetKeyDown(KeyCode.Q))
         {
             if (_isSetArea)
@@ -65,12 +86,6 @@ public class PerspectiveTransform : MonoBehaviour
             {
                 Debug.LogError($"Need to set area first");
             }
-        }
-
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            _pointingMode = !_pointingMode;
-            _trackingMode = false;
         }
         
         if (_trackingMode && latestCameraMat != null && perspectiveMatrix != null)
@@ -97,7 +112,9 @@ public class PerspectiveTransform : MonoBehaviour
 
                 int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
                 int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
-                print("Mouse : " + col + " : " + cellWidth);
+                
+                print("Mouse : " + col + " : " + resultPos.x);
+                print("Mouse : " + row + " : " + resultPos.y );
 
                 col = Mathf.Clamp(col, 0, gridCols - 1);
                 row = Mathf.Clamp(row, 0, gridRows - 1);

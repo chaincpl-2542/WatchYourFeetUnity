@@ -48,9 +48,6 @@ public class PersonPositionTransformer : MonoBehaviour
 
         print($"Person x : {x} y : {y} ");
         
-        // Flip Y axis to match OpenCV coordinate
-        y = camHeight - y;
-
         // Apply perspective transform
         MatOfPoint2f srcPoint = new MatOfPoint2f(new Point(x, y));
         MatOfPoint2f dstPoint = new MatOfPoint2f();
@@ -64,7 +61,8 @@ public class PersonPositionTransformer : MonoBehaviour
         int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
         int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
         
-        print("Person : " + col + " : " + cellWidth);
+        print("Person : " + col + " : " + resultPos.x);
+        print("Person : " + row + " : " + resultPos.y);
         col = Mathf.Clamp(col, 0, gridCols - 1);
         row = Mathf.Clamp(row, 0, gridRows - 1);
 

@@ -94,7 +94,10 @@ namespace OpenCVForUnityExample
 
             texture = new Texture2D(rgbaMat.cols(), rgbaMat.rows(), TextureFormat.RGBA32, false);
             Utils.matToTexture2D(rgbaMat, texture);
-
+            
+            int camWidth = multiSource2MatHelper.GetWidth();
+            int camHeight = multiSource2MatHelper.GetHeight();
+            
             rawImageDisplay.texture = texture;
             rawImageDisplay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rgbaMat.cols());
             rawImageDisplay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rgbaMat.rows());

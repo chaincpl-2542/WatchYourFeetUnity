@@ -162,6 +162,10 @@ namespace OpenCVForUnityExample.DnnModel
                 skeletons[i].Line.positionCount = 2;
             }
         }
+        public Vector3[] GetWorldLandmarks()
+        {
+            return landmarks_world_buffer;
+        }
     }
 }
 #endif

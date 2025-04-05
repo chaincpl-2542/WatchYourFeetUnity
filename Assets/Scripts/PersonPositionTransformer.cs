@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using OpenCVForUnity.CoreModule;
 using TMPro;
@@ -31,7 +32,7 @@ public class PersonPositionTransformer : MonoBehaviour
         resultWidthSize = perspectiveTransform.resultWidthSize;
         resultHeightSize = perspectiveTransform.resultHeightSize;
         
-        var rawRect = perspectiveTransform.rawImageDisplay.rectTransform;
+        var rawRect = perspectiveTransform.rawImageDisplayUI.rectTransform;
         var camMat = perspectiveTransform.GetCameraMat();
         if (camMat == null)
         {
@@ -61,8 +62,6 @@ public class PersonPositionTransformer : MonoBehaviour
         int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
         int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
         
-        print("Person : " + col + " : " + resultPos.x);
-        print("Person : " + row + " : " + resultPos.y);
         col = Mathf.Clamp(col, 0, gridCols - 1);
         row = Mathf.Clamp(row, 0, gridRows - 1);
 
@@ -80,6 +79,8 @@ public class PersonPositionTransformer : MonoBehaviour
             float uiY = (float)(1.0 - (resultPos.y / texHeight)) * resultRect.rect.height - pivotOffset.y;
 
             gridMarkerUI.anchoredPosition = new Vector2(uiX, uiY);
+
+            GameManager.Instance.PlayPositionCheck(row,col);
         }
     }
 }

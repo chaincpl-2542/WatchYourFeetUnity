@@ -8,7 +8,7 @@ using TMPro;
 
 public class PerspectiveTransform : MonoBehaviour
 {
-    public RawImage rawImageDisplay;
+    public RawImage rawImageDisplayUI;
     public RawImage rawImageResult;
     public GameObject debugPanel;
     private Mat sourceMat;
@@ -43,12 +43,18 @@ public class PerspectiveTransform : MonoBehaviour
     private Mat latestCameraMat;
     private Mat perspectiveMatrix;
     public RectTransform markerRectTransform;
+    
+    [Header("3D Box")]
+    public GameObject boxPrefab;
+    public float boxDistance = 3f; // ระยะจากกล้องที่ box วางอยู่
+    public Transform boxParent;
 
     void Start()
     {
         confirmButton.onClick.AddListener(OnConfirmCustomResultSize);
+        GenerateBox();
     }
-
+    
     void Update()
     {
         HandlePointClick();
@@ -72,6 +78,7 @@ public class PerspectiveTransform : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R))
         {
             _showDebug = !_showDebug;
+            rawImageDisplayUI.enabled = _showDebug;
             debugPanel.SetActive(_showDebug);
         }
 
@@ -79,6 +86,7 @@ public class PerspectiveTransform : MonoBehaviour
         {
             if (_isSetArea)
             {
+                GameManager.Instance.StartGame();
                 _trackingMode = !_trackingMode;
                 _pointingMode = false;
             }
@@ -91,7 +99,7 @@ public class PerspectiveTransform : MonoBehaviour
         if (_trackingMode && latestCameraMat != null && perspectiveMatrix != null)
         {
             Vector2 mousePos = Input.mousePosition;
-            RectTransform rect = rawImageDisplay.rectTransform;
+            RectTransform rect = rawImageDisplayUI.rectTransform;
 
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null, out Vector2 localPos))
             {
@@ -112,9 +120,6 @@ public class PerspectiveTransform : MonoBehaviour
 
                 int col = Mathf.FloorToInt((float)resultPos.x / cellWidth);
                 int row = Mathf.FloorToInt((float)resultPos.y / cellHeight);
-                
-                print("Mouse : " + col + " : " + resultPos.x);
-                print("Mouse : " + row + " : " + resultPos.y );
 
                 col = Mathf.Clamp(col, 0, gridCols - 1);
                 row = Mathf.Clamp(row, 0, gridRows - 1);
@@ -143,7 +148,7 @@ public class PerspectiveTransform : MonoBehaviour
                 if (Input.GetMouseButtonDown(0) && clickCount < 4)
                 {
                     Vector2 mousePos = Input.mousePosition;
-                    RectTransform rect = rawImageDisplay.rectTransform;
+                    RectTransform rect = rawImageDisplayUI.rectTransform;
 
                     if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, mousePos, null,
                             out Vector2 localPos))
@@ -154,12 +159,8 @@ public class PerspectiveTransform : MonoBehaviour
                         float x = (localPos.x + rect.rect.width / 2) * latestCameraMat.width() / rect.rect.width;
                         float y = (localPos.y + rect.rect.height / 2) * latestCameraMat.height() / rect.rect.height;
                         
-                        print($"Mouse x : {x} y : {y} ");
-                        
                         clickedPoints[clickCount] = new Vector2(x, latestCameraMat.height() - y);
                         clickCount++;
-
-                        Debug.Log($"Point {clickCount}: ({x}, {latestCameraMat.height() - y})");
 
                         if (clickCount == 4)
                         {
@@ -286,11 +287,39 @@ public class PerspectiveTransform : MonoBehaviour
     public void SetCameraMat(Mat mat)
     {
         latestCameraMat = mat;
-        //Debug.Log($"✅ latestCameraMat SET: {mat.width()}x{mat.height()}");
     }
     
     public Mat GetCameraMat()
     {
         return latestCameraMat;
     }
+    
+    public Vector2[] GetClickedPoints()
+    {
+        Vector2[] copy = new Vector2[clickedPoints.Length];
+        clickedPoints.CopyTo(copy, 0);
+        return copy;
+    }
+    
+    void GenerateBox()
+    {
+        if (boxPrefab == null) return;
+
+        float spacing = 1.0f;
+        Vector3 startPos = new Vector3(-(gridCols - 1) * spacing / 2f, 0, boxDistance);
+
+        for (int row = 0; row < gridRows; row++)
+        {
+            for (int col = 0; col < gridCols; col++)
+            {
+                Vector3 offset = new Vector3(col * spacing, 0, row * spacing);
+                Vector3 worldPos = startPos + offset;
+
+                var box = Instantiate(boxPrefab, worldPos, Quaternion.identity, boxParent);
+                box.GetComponent<Box>().row = row + 1;
+                box.GetComponent<Box>().col = col + 1;
+            }
+        }
+    }
+
 }

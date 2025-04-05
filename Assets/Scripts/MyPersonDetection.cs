@@ -16,6 +16,7 @@ namespace OpenCVForUnityExample
     {   
         public PerspectiveTransform perspectiveTransform;
         public RawImage rawImageDisplay;
+        public RawImage vdoDisplayWorldSpace;
         public Image markerPrefab;
         public Image centerMarkerPrefab;
         public PersonPositionTransformer positionTransformer;
@@ -44,6 +45,13 @@ namespace OpenCVForUnityExample
 
         private CancellationTokenSource cts = new CancellationTokenSource();
 
+        public RawImage rawImageMaskOverlay;
+        private Texture2D maskTexture;
+        public Material maskedOverlayMaterial;
+        
+        public GameObject personBotPrefab;
+        private GameObject spawnedBot;
+        
         async void Start()
         {
             multiSource2MatHelper = GetComponent<MultiSource2MatHelper>();
@@ -98,16 +106,35 @@ namespace OpenCVForUnityExample
             int camWidth = multiSource2MatHelper.GetWidth();
             int camHeight = multiSource2MatHelper.GetHeight();
             
+            maskTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+            rawImageMaskOverlay.texture = maskTexture;
+            rawImageMaskOverlay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rgbaMat.cols());
+            rawImageMaskOverlay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rgbaMat.rows());
             rawImageDisplay.texture = texture;
             rawImageDisplay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rgbaMat.cols());
             rawImageDisplay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rgbaMat.rows());
+            vdoDisplayWorldSpace.texture = texture;
+            vdoDisplayWorldSpace.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rgbaMat.cols());
+            vdoDisplayWorldSpace.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rgbaMat.rows());
 
+            if (maskedOverlayMaterial != null)
+            {
+                maskedOverlayMaterial.SetTexture("_MainTex", texture);
+                maskedOverlayMaterial.SetTexture("_MaskTex", maskTexture);
+                rawImageMaskOverlay.material = maskedOverlayMaterial;
+            }
+            
             bgrMat = new Mat(rgbaMat.rows(), rgbaMat.cols(), CvType.CV_8UC3);
             arHelper.Initialize(Screen.width, Screen.height, rgbaMat.width(), rgbaMat.height(), new double[0]);
         }
 
         void Update()
         {
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                SpawnPersonBot();
+            }
+            
             if (multiSource2MatHelper.IsPlaying() && multiSource2MatHelper.DidUpdateThisFrame())
             {
                 Mat rgbaMat = multiSource2MatHelper.GetMat();
@@ -129,7 +156,16 @@ namespace OpenCVForUnityExample
                     for (int i = 0; i < persons.rows(); ++i)
                     {
                         List<Mat> results = poseEstimator.infer(bgrMat, persons.row(i), mask);
+                        Mat poseMat = results[0];
+                        Mat maskMat = results[1];
                         poses.Add(results[0]);
+                        
+                        if (!maskMat.empty())
+                        {
+                            Mat maskColor = new Mat();
+                            Utils.matToTexture2D(maskMat, maskTexture);
+                            maskColor.Dispose();                        
+                        }
                     }
 
                     Imgproc.cvtColor(bgrMat, rgbaMat, Imgproc.COLOR_BGR2RGBA);
@@ -137,7 +173,7 @@ namespace OpenCVForUnityExample
                     foreach (var pose in poses)
                         poseEstimator.visualize(rgbaMat, pose, false, true);
 
-                    if (skeletonVisualizer != null && skeletonVisualizer.showSkeleton && poses.Count > 0 && !poses[0].empty())
+                    if (poses.Count > 0 && !poses[0].empty())
                     {
                         var data = poseEstimator.getData(poses[0]);
                         var landmarks_screen = data.landmarks_screen;
@@ -175,7 +211,7 @@ namespace OpenCVForUnityExample
                         float centerYUI = (1f - (centerScreen.y / texHeight)) * uiHeight - uiHeight / 2f;
 
                         centerMarker.rectTransform.anchoredPosition = new Vector2(centerXUI, centerYUI);
-
+                        
                         if (positionTransformer != null)
                             positionTransformer.UpdatePosition(centerScreen);
 
@@ -196,7 +232,42 @@ namespace OpenCVForUnityExample
             Utils.setDebugMode(false);
             cts?.Dispose();
         }
-        
+
+        public void SpawnPersonBot()
+        {
+            if (personBotPrefab != null && skeletonVisualizer != null)
+            {
+                Vector3[] worldLandmarks = skeletonVisualizer.GetWorldLandmarks();
+                if (worldLandmarks != null)
+                {
+                    spawnedBot = Instantiate(personBotPrefab);
+
+                    PersonBot bot = spawnedBot.GetComponent<PersonBot>();
+                    if (bot != null)
+                    {
+                        // Map กระดูกหลัก
+                        bot.head.position = worldLandmarks[(int)KeyPoint.Nose];
+
+                        bot.leftShoulder.position = worldLandmarks[(int)KeyPoint.LeftShoulder];
+                        bot.leftUpperArm.position = worldLandmarks[(int)KeyPoint.LeftElbow];
+                        bot.leftLowerArm.position = worldLandmarks[(int)KeyPoint.LeftWrist];
+
+                        bot.rightShoulder.position = worldLandmarks[(int)KeyPoint.RightShoulder];
+                        bot.rightUpperArm.position = worldLandmarks[(int)KeyPoint.RightElbow];
+                        bot.rightLowerArm.position = worldLandmarks[(int)KeyPoint.RightWrist];
+
+                        bot.leftUpperLeg.position = worldLandmarks[(int)KeyPoint.LeftHip];
+                        bot.leftLowerLeg.position = worldLandmarks[(int)KeyPoint.LeftKnee];
+                        bot.leftFoot.position = worldLandmarks[(int)KeyPoint.LeftAnkle];
+
+                        bot.rightUpperLeg.position = worldLandmarks[(int)KeyPoint.RightHip];
+                        bot.rightLowerLeg.position = worldLandmarks[(int)KeyPoint.RightKnee];
+                        bot.rightFoot.position = worldLandmarks[(int)KeyPoint.RightAnkle];
+                    }
+                }
+            }
+        }
+
         public void OnSourceToMatHelperDisposed()
         {
             if (bgrMat != null)

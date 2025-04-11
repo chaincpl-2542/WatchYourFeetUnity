@@ -47,8 +47,6 @@ public class PersonPositionTransformer : MonoBehaviour
         float x = (screenPosition.x / rawRect.rect.width) * camWidth;
         float y = (screenPosition.y / rawRect.rect.height) * camHeight;
 
-        print($"Person x : {x} y : {y} ");
-        
         // Apply perspective transform
         MatOfPoint2f srcPoint = new MatOfPoint2f(new Point(x, y));
         MatOfPoint2f dstPoint = new MatOfPoint2f();

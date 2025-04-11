@@ -1,12 +1,13 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
+using UnityEngine;
+using UnityEngine.UI;
 using OpenCVForUnity.CoreModule;
 using OpenCVForUnity.ImgprocModule;
 using OpenCVForUnity.UnityUtils;
 using OpenCVForUnity.UnityUtils.Helper;
 using OpenCVForUnityExample.DnnModel;
-using System.Collections.Generic;
-using System.Threading;
-using UnityEngine;
-using UnityEngine.UI;
 using KeyPoint = OpenCVForUnityExample.DnnModel.MediaPipePoseEstimator.KeyPoint;
 
 namespace OpenCVForUnityExample
@@ -53,6 +54,7 @@ namespace OpenCVForUnityExample
         
         public GameObject personBotPrefab;
         private GameObject spawnedBot;
+        public Vector3[] worldLandmarks;
         
         async void Start()
         {
@@ -65,7 +67,8 @@ namespace OpenCVForUnityExample
             
             multiSource2MatHelper.Initialize();
 
-            if (skeletonVisualizer != null) skeletonVisualizer.showSkeleton = showSkeleton;
+            if (skeletonVisualizer != null)
+                skeletonVisualizer.showSkeleton = showSkeleton;
 
             person_detection_model_filepath = await Utils.getFilePathAsyncTask(PERSON_DETECTION_MODEL_FILENAME, cancellationToken: cts.Token);
             pose_estimation_model_filepath = await Utils.getFilePathAsyncTask(POSE_ESTIMATION_MODEL_FILENAME, cancellationToken: cts.Token);
@@ -134,11 +137,6 @@ namespace OpenCVForUnityExample
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.K))
-            {
-                SpawnPersonBot();
-            }
-            
             if (multiSource2MatHelper.IsPlaying() && multiSource2MatHelper.DidUpdateThisFrame())
             {
                 Mat rgbaMat = multiSource2MatHelper.GetMat();
@@ -148,8 +146,8 @@ namespace OpenCVForUnityExample
                 
                 if (personDetector == null || poseEstimator == null)
                 {
-                    Imgproc.putText(rgbaMat, "model file is not loaded.", new Point(5, rgbaMat.rows() - 30), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(255, 255, 255, 255), 2);
-                    Imgproc.putText(rgbaMat, "Please read console message.", new Point(5, rgbaMat.rows() - 10), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(255, 255, 255, 255), 2);
+                    Imgproc.putText(rgbaMat, "model file is not loaded.", new Point(5, rgbaMat.rows() - 30), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(255,255,255,255), 2);
+                    Imgproc.putText(rgbaMat, "Please read console message.", new Point(5, rgbaMat.rows() - 10), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(255,255,255,255), 2);
                 }
                 else
                 {
@@ -160,6 +158,7 @@ namespace OpenCVForUnityExample
                     for (int i = 0; i < persons.rows(); ++i)
                     {
                         List<Mat> results = poseEstimator.infer(bgrMat, persons.row(i), mask);
+                        // We get the pose and mask.
                         Mat poseMat = results[0];
                         Mat maskMat = results[1];
                         poses.Add(results[0]);
@@ -172,13 +171,17 @@ namespace OpenCVForUnityExample
 
                     Imgproc.cvtColor(bgrMat, rgbaMat, Imgproc.COLOR_BGR2RGBA);
 
-                    // foreach (var pose in poses)
-                    //     poseEstimator.visualize(rgbaMat, pose, false, true);
-
                     if (poses.Count > 0 && !poses[0].empty())
                     {
                         var data = poseEstimator.getData(poses[0]);
                         var landmarks_screen = data.landmarks_screen;
+                        
+                        worldLandmarks = new Vector3[landmarks_screen.Length];
+                        for (int i = 0; i < landmarks_screen.Length; i++)
+                        {
+                            worldLandmarks[i] = new Vector3(landmarks_screen[i].x, landmarks_screen[i].y, 0);
+                        }
+                        skeletonVisualizer.UpdatePose(worldLandmarks);
 
                         Vector2 leftFoot = new Vector2(landmarks_screen[(int)KeyPoint.LeftFootIndex].x, landmarks_screen[(int)KeyPoint.LeftFootIndex].y);
                         Vector2 rightFoot = new Vector2(landmarks_screen[(int)KeyPoint.RightFootIndex].x, landmarks_screen[(int)KeyPoint.RightFootIndex].y);
@@ -234,54 +237,76 @@ namespace OpenCVForUnityExample
             }
         }
 
-        void OnDestroy()
+        public void SpawnPersonBot(Vector3 pos)
         {
-            multiSource2MatHelper.Dispose();
-            personDetector?.dispose();
-            poseEstimator?.dispose();
-            Utils.setDebugMode(false);
-            cts?.Dispose();
-
-            if (compositeRenderTexture != null)
-            {
-                compositeRenderTexture.Release();
-                Destroy(compositeRenderTexture);
-            }
+            Quaternion rot = Quaternion.Euler(0, 180, 0);
+            spawnedBot = Instantiate(personBotPrefab, pos, rot);
+            // worldLandmarks = skeletonVisualizer.GetWorldLandmarks();
+            // if (worldLandmarks == null)
+            // {
+            //     Debug.LogWarning("Cannot spawn bot because world landmarks are not available or incomplete.");
+            //     return;
+            // }
+            //
+            // if (personBotPrefab != null)
+            // {
+            //     spawnedBot = Instantiate(personBotPrefab);
+            //     PersonBot bot = spawnedBot.GetComponent<PersonBot>();
+            //     if (bot != null)
+            //     {
+            //         bot.head.position = worldLandmarks[(int)KeyPoint.Nose];
+            //
+            //         bot.leftShoulder.position = worldLandmarks[(int)KeyPoint.LeftShoulder];
+            //         bot.leftUpperArm.position = worldLandmarks[(int)KeyPoint.LeftElbow];
+            //         bot.leftLowerArm.position = worldLandmarks[(int)KeyPoint.LeftWrist];
+            //
+            //         bot.rightShoulder.position = worldLandmarks[(int)KeyPoint.RightShoulder];
+            //         bot.rightUpperArm.position = worldLandmarks[(int)KeyPoint.RightElbow];
+            //         bot.rightLowerArm.position = worldLandmarks[(int)KeyPoint.RightWrist];
+            //
+            //         bot.leftUpperLeg.position = worldLandmarks[(int)KeyPoint.LeftHip];
+            //         bot.leftLowerLeg.position = worldLandmarks[(int)KeyPoint.LeftKnee];
+            //         bot.leftFoot.position = worldLandmarks[(int)KeyPoint.LeftAnkle];
+            //
+            //         bot.rightUpperLeg.position = worldLandmarks[(int)KeyPoint.RightHip];
+            //         bot.rightLowerLeg.position = worldLandmarks[(int)KeyPoint.RightKnee];
+            //         bot.rightFoot.position = worldLandmarks[(int)KeyPoint.RightAnkle];
+            //     }
+            // }
         }
 
-        public void SpawnPersonBot()
+        public void HandlePlayerDeath(Vector3 pos)
         {
-            if (personBotPrefab != null && skeletonVisualizer != null)
+            if (spawnedBot == null && personBotPrefab != null)
             {
-                Vector3[] worldLandmarks = skeletonVisualizer.GetWorldLandmarks();
-                if (worldLandmarks != null)
-                {
-                    spawnedBot = Instantiate(personBotPrefab);
-
-                    PersonBot bot = spawnedBot.GetComponent<PersonBot>();
-                    if (bot != null)
-                    {
-                        // Bone map
-                        bot.head.position = worldLandmarks[(int)KeyPoint.Nose];
-
-                        bot.leftShoulder.position = worldLandmarks[(int)KeyPoint.LeftShoulder];
-                        bot.leftUpperArm.position = worldLandmarks[(int)KeyPoint.LeftElbow];
-                        bot.leftLowerArm.position = worldLandmarks[(int)KeyPoint.LeftWrist];
-
-                        bot.rightShoulder.position = worldLandmarks[(int)KeyPoint.RightShoulder];
-                        bot.rightUpperArm.position = worldLandmarks[(int)KeyPoint.RightElbow];
-                        bot.rightLowerArm.position = worldLandmarks[(int)KeyPoint.RightWrist];
-
-                        bot.leftUpperLeg.position = worldLandmarks[(int)KeyPoint.LeftHip];
-                        bot.leftLowerLeg.position = worldLandmarks[(int)KeyPoint.LeftKnee];
-                        bot.leftFoot.position = worldLandmarks[(int)KeyPoint.LeftAnkle];
-
-                        bot.rightUpperLeg.position = worldLandmarks[(int)KeyPoint.RightHip];
-                        bot.rightLowerLeg.position = worldLandmarks[(int)KeyPoint.RightKnee];
-                        bot.rightFoot.position = worldLandmarks[(int)KeyPoint.RightAnkle];
-                    }
-                }
+                SpawnPersonBot(pos);
             }
+            
+            if (rawImageMaskOverlay != null)
+            {
+                rawImageMaskOverlay.gameObject.SetActive(false);
+            }
+            
+            Debug.Log("Player is dead. Bot spawned and mask overlay hidden.");
+            StartCoroutine(DestroyBotAfterDelay(5f));
+        }
+
+        private IEnumerator DestroyBotAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            if (spawnedBot != null)
+            {
+                Destroy(spawnedBot);
+                spawnedBot = null;
+            }
+            
+            if (rawImageMaskOverlay != null)
+            {
+                rawImageMaskOverlay.gameObject.SetActive(true);
+            }
+            
+            Debug.Log("Bot destroyed after delay. Mask overlay restored.");
         }
 
         public void OnSourceToMatHelperDisposed()

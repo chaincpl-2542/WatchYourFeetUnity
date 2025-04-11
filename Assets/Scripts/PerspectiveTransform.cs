@@ -10,6 +10,7 @@ public class PerspectiveTransform : MonoBehaviour
 {
     public RawImage rawImageDisplayUI;
     public RawImage rawImageResult;
+    public RawImage rawImageMaskOverlay;
     public GameObject debugPanel;
     private Mat sourceMat;
 
@@ -164,6 +165,7 @@ public class PerspectiveTransform : MonoBehaviour
 
                         if (clickCount == 4)
                         {
+                            rawImageMaskOverlay.enabled = true;
                             ApplyPerspectiveTransform();
                             clickCount = 0;
                         }
@@ -304,10 +306,10 @@ public class PerspectiveTransform : MonoBehaviour
     void GenerateBox()
     {
         if (boxPrefab == null) return;
-
+        int maxRow = gridRows - 1;
         float spacing = 1.2f;
+        
         Vector3 startPos = new Vector3(-(gridCols - 1) * spacing / 2f, 0, boxDistance);
-
         for (int row = 0; row < gridRows; row++)
         {
             for (int col = 0; col < gridCols; col++)
@@ -316,10 +318,11 @@ public class PerspectiveTransform : MonoBehaviour
                 Vector3 worldPos = startPos + offset;
 
                 var box = Instantiate(boxPrefab, worldPos, Quaternion.identity, boxParent);
-                box.GetComponent<Box>().row = row + 1;
-                box.GetComponent<Box>().col = col + 1;
+                box.GetComponent<Box>().row = maxRow;
+                box.GetComponent<Box>().col = col;
             }
+
+            maxRow -= 1;
         }
     }
-
 }

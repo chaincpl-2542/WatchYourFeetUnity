@@ -221,6 +221,7 @@ namespace OpenCVForUnityExample
                 }
 
                 Utils.matToTexture2D(rgbaMat, texture);
+                texture.Apply();
             }
         }
 
@@ -245,7 +246,7 @@ namespace OpenCVForUnityExample
                     PersonBot bot = spawnedBot.GetComponent<PersonBot>();
                     if (bot != null)
                     {
-                        // Map กระดูกหลัก
+                        // Bone map
                         bot.head.position = worldLandmarks[(int)KeyPoint.Nose];
 
                         bot.leftShoulder.position = worldLandmarks[(int)KeyPoint.LeftShoulder];

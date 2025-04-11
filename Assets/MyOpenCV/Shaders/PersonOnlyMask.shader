@@ -1,12 +1,11 @@
-Shader "Unlit/ShowOnlyPerson"
+Shader "Custom/PersonOnlyMask"
 {
     Properties
     {
-        _MainTex ("Color Texture", 2D) = "white" {}
-        _MaskTex ("Mask Texture", 2D) = "white" {}
-        _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.1
+        _MainTex ("Main Texture (Video)", 2D) = "white" {}
+        _MaskTex ("Mask Texture", 2D) = "black" {}
+        _Cutoff ("Mask Cutoff", Range(0,1)) = 0.5
     }
-
     SubShader
     {
         Tags { "Queue"="Transparent" "RenderType"="Transparent" }
@@ -15,8 +14,8 @@ Shader "Unlit/ShowOnlyPerson"
         Pass
         {
             ZWrite Off
-            Blend SrcAlpha OneMinusSrcAlpha
             Cull Off
+            Blend SrcAlpha OneMinusSrcAlpha
 
             CGPROGRAM
             #pragma vertex vert
@@ -39,7 +38,7 @@ Shader "Unlit/ShowOnlyPerson"
                 float4 vertex : SV_POSITION;
             };
 
-            v2f vert(appdata v)
+            v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
@@ -47,15 +46,16 @@ Shader "Unlit/ShowOnlyPerson"
                 return o;
             }
 
-            fixed4 frag(v2f i) : SV_Target
+            fixed4 frag (v2f i) : SV_Target
             {
-                float4 color = tex2D(_MainTex, i.uv);
+                // ตัวอย่างดึงสีจาก video texture
+                fixed4 color = tex2D(_MainTex, i.uv);
+                // ดึงค่า mask จาก _MaskTex (ใช้เฉพาะ channel สีแดง)
                 float mask = tex2D(_MaskTex, i.uv).r;
-                if (mask < _Cutoff) discard;
-                color.a = 1; // แสดงเต็มสี ไม่มีโปร่งใส
+                // หาก mask มีค่าสูงกว่า _Cutoff ให้ alpha เท่ากับ 1, มิฉะนั้น alpha เป็น 0
+                color.a = step(_Cutoff, mask);
                 return color;
             }
-
             ENDCG
         }
     }

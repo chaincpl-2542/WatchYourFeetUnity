@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using UnityEngine;
 
 public class Box : MonoBehaviour
@@ -8,24 +6,23 @@ public class Box : MonoBehaviour
     public int col;
     public bool isSafe;
 
-    public GameObject cross;
-    public GameObject correct;
-    public GameObject main;
-
-    public float delayTime = 3f;
-    public float delayResetTime = 3f;
-
-    private bool check;
+    public GameObject cross;    // indicator for unsafe
+    public GameObject correct;  // indicator for safe
+    public GameObject main;     // the visible box itself
 
     private void Start()
     {
+        // Assume the box starts as safe.
+        isSafe = true;
+        main.SetActive(true);
         correct.SetActive(false);
         cross.SetActive(false);
     }
 
-    public void SetBoxState(bool state)
+    // Called when displaying the current state (safe or unsafe)
+    public void ShowState()
     {
-        isSafe = state;
+        main.SetActive(true);
         if (isSafe)
         {
             correct.SetActive(true);
@@ -36,25 +33,24 @@ public class Box : MonoBehaviour
             correct.SetActive(false);
             cross.SetActive(true);
         }
-
-        if (!check)
-        {
-            StartCoroutine(Delay(state));
-            check = true;
-        }
     }
 
-    public IEnumerator Delay(bool state)
+    // Called to hide unsafe boxes (simulate falling)
+    public void HideUnsafeBox()
     {
-        yield return new WaitForSeconds(delayTime);
-        main.SetActive(state);
-        isSafe = state;
-        
-        yield return new WaitForSeconds(delayResetTime);
+        if (!isSafe)
+        {
+            main.SetActive(false);
+        }
+        // Safe boxes remain visible.
+    }
+
+    // Called to reset the box (set to safe)
+    public void ResetBox()
+    {
+        isSafe = true;
         main.SetActive(true);
         correct.SetActive(false);
         cross.SetActive(false);
-        isSafe = true;
-        check = false;
     }
 }

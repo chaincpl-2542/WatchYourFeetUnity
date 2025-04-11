@@ -21,6 +21,7 @@ namespace OpenCVForUnityExample
         public Image centerMarkerPrefab;
         public PersonPositionTransformer positionTransformer;
 
+        float smoothingSpeed = 40f;
         private Image leftFootMarker;
         private Image rightFootMarker;
         private Image centerMarker;
@@ -48,6 +49,7 @@ namespace OpenCVForUnityExample
         public RawImage rawImageMaskOverlay;
         private Texture2D maskTexture;
         public Material maskedOverlayMaterial;
+        private RenderTexture compositeRenderTexture;
         
         public GameObject personBotPrefab;
         private GameObject spawnedBot;
@@ -107,7 +109,11 @@ namespace OpenCVForUnityExample
             int camHeight = multiSource2MatHelper.GetHeight();
             
             maskTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
-            rawImageMaskOverlay.texture = maskTexture;
+            
+            compositeRenderTexture = new RenderTexture(texture.width, texture.height, 0, RenderTextureFormat.ARGB32);
+            compositeRenderTexture.Create();
+            
+            rawImageMaskOverlay.texture = compositeRenderTexture;
             rawImageMaskOverlay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rgbaMat.cols());
             rawImageMaskOverlay.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rgbaMat.rows());
             rawImageDisplay.texture = texture;
@@ -119,8 +125,6 @@ namespace OpenCVForUnityExample
 
             if (maskedOverlayMaterial != null)
             {
-                maskedOverlayMaterial.SetTexture("_MainTex", texture);
-                maskedOverlayMaterial.SetTexture("_MaskTex", maskTexture);
                 rawImageMaskOverlay.material = maskedOverlayMaterial;
             }
             
@@ -162,16 +166,14 @@ namespace OpenCVForUnityExample
                         
                         if (!maskMat.empty())
                         {
-                            Mat maskColor = new Mat();
                             Utils.matToTexture2D(maskMat, maskTexture);
-                            maskColor.Dispose();                        
                         }
                     }
 
                     Imgproc.cvtColor(bgrMat, rgbaMat, Imgproc.COLOR_BGR2RGBA);
 
-                    foreach (var pose in poses)
-                        poseEstimator.visualize(rgbaMat, pose, false, true);
+                    // foreach (var pose in poses)
+                    //     poseEstimator.visualize(rgbaMat, pose, false, true);
 
                     if (poses.Count > 0 && !poses[0].empty())
                     {
@@ -190,12 +192,11 @@ namespace OpenCVForUnityExample
 
                         float leftX = (leftFoot.x / texWidth) * uiWidth - uiWidth / 2f;
                         float leftY = (1f - (leftFoot.y / texHeight)) * uiHeight - uiHeight / 2f;
-
                         float rightX = (rightFoot.x / texWidth) * uiWidth - uiWidth / 2f;
                         float rightY = (1f - (rightFoot.y / texHeight)) * uiHeight - uiHeight / 2f;
 
-                        leftFootMarker.rectTransform.anchoredPosition = new Vector2(leftX, leftY);
-                        rightFootMarker.rectTransform.anchoredPosition = new Vector2(rightX, rightY);
+                        Vector2 leftTarget = new Vector2(leftX, leftY);
+                        Vector2 rightTarget = new Vector2(rightX, rightY);
 
                         float centerX = (leftFoot.x + rightFoot.x) / 2f;
                         float lowestY = landmarks_screen[0].y;
@@ -204,14 +205,15 @@ namespace OpenCVForUnityExample
                             if (landmarks_screen[i].y > lowestY)
                                 lowestY = landmarks_screen[i].y;
                         }
-
                         Vector2 centerScreen = new Vector2(centerX, lowestY);
-
                         float centerXUI = (centerScreen.x / texWidth) * uiWidth - uiWidth / 2f;
                         float centerYUI = (1f - (centerScreen.y / texHeight)) * uiHeight - uiHeight / 2f;
+                        Vector2 centerTarget = new Vector2(centerXUI, centerYUI);
 
-                        centerMarker.rectTransform.anchoredPosition = new Vector2(centerXUI, centerYUI);
-                        
+                        leftFootMarker.rectTransform.anchoredPosition = Vector2.Lerp(leftFootMarker.rectTransform.anchoredPosition, leftTarget, Time.deltaTime * smoothingSpeed);
+                        rightFootMarker.rectTransform.anchoredPosition = Vector2.Lerp(rightFootMarker.rectTransform.anchoredPosition, rightTarget, Time.deltaTime * smoothingSpeed);
+                        centerMarker.rectTransform.anchoredPosition = Vector2.Lerp(centerMarker.rectTransform.anchoredPosition, centerTarget, Time.deltaTime * smoothingSpeed);
+
                         if (positionTransformer != null)
                             positionTransformer.UpdatePosition(centerScreen);
 
@@ -222,6 +224,13 @@ namespace OpenCVForUnityExample
 
                 Utils.matToTexture2D(rgbaMat, texture);
                 texture.Apply();
+
+                if (maskedOverlayMaterial != null)
+                {
+                    maskedOverlayMaterial.SetTexture("_MainTex", texture);
+                    maskedOverlayMaterial.SetTexture("_MaskTex", maskTexture);
+                    Graphics.Blit(texture, compositeRenderTexture, maskedOverlayMaterial);
+                }
             }
         }
 
@@ -232,6 +241,12 @@ namespace OpenCVForUnityExample
             poseEstimator?.dispose();
             Utils.setDebugMode(false);
             cts?.Dispose();
+
+            if (compositeRenderTexture != null)
+            {
+                compositeRenderTexture.Release();
+                Destroy(compositeRenderTexture);
+            }
         }
 
         public void SpawnPersonBot()

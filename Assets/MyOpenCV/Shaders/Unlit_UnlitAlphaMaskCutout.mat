@@ -35,6 +35,7 @@ Material:
     m_Floats:
     - _AlphaCutoff: 0.1
     - _Cutoff: 0.1
+    - _EdgeWidth: 0.05
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

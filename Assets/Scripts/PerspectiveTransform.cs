@@ -305,7 +305,7 @@ public class PerspectiveTransform : MonoBehaviour
     {
         if (boxPrefab == null) return;
 
-        float spacing = 1.0f;
+        float spacing = 1.2f;
         Vector3 startPos = new Vector3(-(gridCols - 1) * spacing / 2f, 0, boxDistance);
 
         for (int row = 0; row < gridRows; row++)

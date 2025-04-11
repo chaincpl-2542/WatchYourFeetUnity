@@ -5,6 +5,7 @@ Shader "Custom/PersonOnlyMask"
         _MainTex ("Main Texture (Video)", 2D) = "white" {}
         _MaskTex ("Mask Texture", 2D) = "black" {}
         _Cutoff ("Mask Cutoff", Range(0,1)) = 0.5
+        _EdgeWidth ("Edge Softness", Range(0,0.2)) = 0.05
     }
     SubShader
     {
@@ -25,6 +26,7 @@ Shader "Custom/PersonOnlyMask"
             sampler2D _MainTex;
             sampler2D _MaskTex;
             float _Cutoff;
+            float _EdgeWidth;
 
             struct appdata
             {
@@ -48,12 +50,10 @@ Shader "Custom/PersonOnlyMask"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // ตัวอย่างดึงสีจาก video texture
                 fixed4 color = tex2D(_MainTex, i.uv);
-                // ดึงค่า mask จาก _MaskTex (ใช้เฉพาะ channel สีแดง)
-                float mask = tex2D(_MaskTex, i.uv).r;
-                // หาก mask มีค่าสูงกว่า _Cutoff ให้ alpha เท่ากับ 1, มิฉะนั้น alpha เป็น 0
-                color.a = step(_Cutoff, mask);
+                float maskVal = tex2D(_MaskTex, i.uv).r;
+                // ใช้ smoothstep เพื่อให้ขอบของ mask นุ่มนวลขึ้น
+                color.a = smoothstep(_Cutoff - _EdgeWidth, _Cutoff + _EdgeWidth, maskVal);
                 return color;
             }
             ENDCG

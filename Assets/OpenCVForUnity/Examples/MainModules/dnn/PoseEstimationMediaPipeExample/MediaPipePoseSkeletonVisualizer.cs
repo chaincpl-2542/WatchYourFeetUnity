@@ -13,6 +13,7 @@ namespace OpenCVForUnityExample.DnnModel
     /// </summary>
     public class MediaPipePoseSkeletonVisualizer : MonoBehaviour
     {
+        [System.Serializable]
         public class Skeleton
         {
             public GameObject LineObject;
@@ -20,7 +21,7 @@ namespace OpenCVForUnityExample.DnnModel
         }
 
         private const int numSkeletons = 35;
-        private List<Skeleton> skeletons = new List<Skeleton>();
+        public List<Skeleton> skeletons = new List<Skeleton>();
         public Material skeletonMaterial;
 
         private bool _showSkeleton = true;
@@ -42,7 +43,7 @@ namespace OpenCVForUnityExample.DnnModel
         public float skeletonZ;
         public float skeletonScale = 1f;
 
-        private Vector3[] landmarks_world_buffer;
+        public Vector3[] landmarks_world_buffer;
 
         public void UpdatePose(Vector3[] landmarks_world)
         {
@@ -125,7 +126,6 @@ namespace OpenCVForUnityExample.DnnModel
 
             // Copy only world landmarks data from pose data.
             MatUtils.copyFromMat<Vector3>(result.rowRange(199, 199 + 99), landmarks_world_buffer);
-
             UpdatePose(landmarks_world_buffer);
         }
 
@@ -162,6 +162,10 @@ namespace OpenCVForUnityExample.DnnModel
                 skeletons[i].Line.positionCount = 0;
                 skeletons[i].Line.positionCount = 2;
             }
+        }
+        public Vector3[] GetWorldLandmarks()
+        {
+            return landmarks_world_buffer;
         }
     }
 }

@@ -14,6 +14,12 @@ public class GameManager : MonoBehaviour
 
     private Coroutine gameLoopRoutine;
     private bool checkDead;
+    private bool _isGameStarted;
+    private int _round;
+    public int maxRound = 10;
+    public float timerDecreasePerRound = 0.2f;
+    
+    public TextMeshProUGUI roundText;
 
     void Awake()
     {
@@ -30,45 +36,65 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
-        boxes.Clear();
-        foreach (Transform child in boxContainer.transform)
+        if (!_isGameStarted)
         {
-            Box boxComp = child.GetComponent<Box>();
-            if (boxComp != null)
+            _isGameStarted = true;
+            boxes.Clear();
+            foreach (Transform child in boxContainer.transform)
             {
-                boxes.Add(boxComp);
+                Box boxComp = child.GetComponent<Box>();
+                if (boxComp != null)
+                {
+                    boxes.Add(boxComp);
+                }
             }
-        }
 
-        foreach (Box box in boxes)
-        {
-            bool safe = (Random.Range(0, 2) == 0);
-            box.isSafe = safe;
-            box.ShowState();
-        }
+            foreach (Box box in boxes)
+            {
+                bool safe = (Random.Range(0, 2) == 0);
+                box.isSafe = safe;
+                box.ShowState();
+            }
 
-        gameLoopRoutine = StartCoroutine(GameLoop());
+            gameLoopRoutine = StartCoroutine(GameLoop());
+        }
     }
 
     IEnumerator GameLoop()
     {
-        yield return new WaitForSeconds(5f);
-
-        foreach (Box box in boxes)
+        while (_round < maxRound)
         {
-            box.HideUnsafeBox();
-        }
-        yield return new WaitForSeconds(5f);
+            _round += 1;
+            Debug.Log("Round: " + _round);
 
-        foreach (Box box in boxes)
-        {
-            box.ResetBox();
+            
+            yield return new WaitForSeconds(5f - timerDecreasePerRound * (_round - 1));
+
+            foreach (Box box in boxes)
+            {
+                box.HideUnsafeBox();
+            }
+
+            yield return new WaitForSeconds(5f- timerDecreasePerRound * (_round - 1));
+
+            foreach (Box box in boxes)
+            {
+                box.ResetBox();
+            }
+
+            checkDead = false;
         }
-        checkDead = false;
+        
+        Debug.Log("Game Over");
+        _isGameStarted = false;
+        _round = 0;
     }
 
     public void StopGame()
     {
+        _isGameStarted = false;
+        _round = 0;
+        checkDead = false;
         if (gameLoopRoutine != null)
         {
             StopCoroutine(gameLoopRoutine);
@@ -77,7 +103,6 @@ public class GameManager : MonoBehaviour
         playerStatus.text = "Game Stopped.";
     }
 
-    // Call this method to immediately reset the game.
     public void ResetGame()
     {
         StopGame();

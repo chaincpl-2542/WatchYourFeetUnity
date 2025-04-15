@@ -97,6 +97,18 @@ public class PerspectiveTransform : MonoBehaviour
             }
         }
         
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (_isSetArea)
+            {
+                GameManager.Instance.ResetGame();
+            }
+            else
+            {
+                Debug.LogError($"Need to set area first");
+            }
+        }
+        
         if (_trackingMode && latestCameraMat != null && perspectiveMatrix != null)
         {
             Vector2 mousePos = Input.mousePosition;
